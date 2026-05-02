@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+  <script src="jquery.js" onload="window.$ = window.jQuery = module.exports;"></script>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Ирис 120</title>
+  </head>
+  <body id="fon">
+	<h1><a id="object_name">_________</a></h1>
+    <h4>Напряжение A : <a id="UA">*</a>В</h4>
+	<h4>Напряжение B : <a id="UB">*</a>В</h4>
+	<h4>Напряжение C : <a id="UC">*</a>В</h4>
+	<h4>Ток A : <a id="IA">*</a>А</h4>
+	<h4>Ток B : <a id="IB">*</a>А</h4>
+	<h4>Ток C : <a id="IC">*</a>А</h4>
+	<h4>Частота : <a id="Freq">*</a>Hz</h4>
+  </body>
+
+  <script>
+	const dev485adr=1;
+	const IrisStartReg=0x410C;
+	const IrisEndReg=0x4120;
+	const IrisRegIA=0x410E;
+	const IrisRegIB=0x4110;
+	const IrisRegIC=0x4114;
+	const IrisRegUA=0x4116;
+	const IrisRegUB=0x4118;
+	const IrisRegUC=0x411A;	
+	const IrisRegFr=0x410C;
+	
+	const ieee754 = require('ieee754');
+	const modbus = require('jsmodbus');
+	const net = require('net');
+	const socket = new net.Socket();
+	const client = new modbus.client.TCP(socket,dev485adr);
+	var options = {
+
+	}
+	
+	//загрузка настроек
+	var Datastore = require('nedb')
+	var db = new Datastore({ filename: 'datafile.db', autoload: true });
+	db.find({ DATA: 'perf' },  function (err, docs) {
+		console.log("IP:"+docs[0].IP);
+		options.host=docs[0].IP;
+		console.log("PORT:"+docs[0].PORT);
+		options.port=docs[0].PORT;
+		$("#object_name").text(docs[0].OBJECT);
+		//соединение
+		socket.on('error', console.error);
+		console.log("connect - ");
+		console.log(options);
+		socket.connect({port: options.port,  host: options.host});
+		
+	});
+
+	//
+	
+	function ieee754hex(buffer,reg) {
+		var FloatArr=buffer.slice((reg-IrisStartReg)*2, ((reg-IrisStartReg)*2)+4);
+		var val	
+		val=FloatArr[0]
+		FloatArr[0]=FloatArr[1]
+		FloatArr[1]=val
+		val=FloatArr[2]
+		FloatArr[2]=FloatArr[3]
+		FloatArr[3]=val
+		return ieee754.read(FloatArr, 0, true, 23, 4).toFixed(2);
+	}    
+		
+	async function GetRegIris() {
+		var num
+		num = await client.readHoldingRegisters(IrisStartReg, IrisEndReg-IrisStartReg)
+			.then(function (resp) {
+				console.log("Запрос");
+				num = resp.response._body.valuesAsBuffer;
+				console.log("Ответ: ");
+				console.log(num);
+				return num;
+			}).catch(function () {
+				$("#UA").text("-");
+				$("#UB").text("-");
+				$("#UC").text("-");	
+				$("#IA").text("-");
+				$("#IB").text("-");
+				$("#IC").text("-");
+				$("#Freq").text("-");
+				$("#fon").css("background-color", "red");
+			  console.error(require('util').inspect(arguments, {
+				depth: null
+			  }))
+			  socket.end()
+			})
+		return num;
+	} 
+
+
+
+setInterval(function () {
+			GetRegIris().then(function(result) {
+				
+				$("#UA").text(ieee754hex(result,IrisRegUA));
+				$("#UB").text(ieee754hex(result,IrisRegUB));
+				$("#UC").text(ieee754hex(result,IrisRegUC));	
+
+				$("#IA").text(ieee754hex(result,IrisRegIA));
+				$("#IB").text(ieee754hex(result,IrisRegIB));
+				$("#IC").text(ieee754hex(result,IrisRegIC));
+				
+				$("#Freq").text(ieee754hex(result,IrisRegFr));
+
+						
+			});
+
+}, 2000);
+</script>
+</html>
