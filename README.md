@@ -5,10 +5,12 @@
 
 Проект разработан с использованием фреймворка [Electron](https://www.electronjs.org/ru/docs/latest/) - это фреймворк для разработки десктопных приложений с использованием HTML, CSS и JavaScript. А также [node-modbus](https://github.com/Cloud-Automation/node-modbus) — это простой клиент/сервер Modbus TCP/RTU с простым API.
 
+Данное приложение легко адаптировать для других устройств изменив адреса регистров в index.html.
+
 Подготовка
 ------------
 
-Для компиляции проэкта вам понадобятся:
+Для компиляции проекта вам понадобятся:
 
 1. Установить [Git](https://github.com/git-guides/install-git).
 
